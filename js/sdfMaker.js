@@ -332,6 +332,10 @@ export class SDFMaker {
         gl.bindTexture(gl.TEXTURE_2D, this.#input);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
 
+        // adjust preview aspect
+        this.#aspect = paddedW / paddedH;
+        this.#resizePreview();
+
 
         this.#jfa.setSize(paddedW, paddedH);
         this.#color.setSize(paddedW, paddedH);
