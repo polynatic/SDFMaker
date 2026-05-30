@@ -24,7 +24,9 @@ export class ShaderSDF extends Shader {
             jfaUnpack(atlasPixels.x, nearestIn);
             jfaUnpack(atlasPixels.y, nearestOut);
             
-            vec3 sourceColor = texture(sourceColor, vUv).rgb;
+            
+            // vec3 sourceColor = texture(sourceColor, vUv).rgb;
+            vec3 sourceColor = vec3(1, 1, 1); // all channels white
             
             if (texelFetch(source, atlasCoordinate, 0).a > threshold)
                 color = vec4(sourceColor, min(1., .5 + length(vec2(atlasCoordinate - ivec2(nearestIn))) / radius));
