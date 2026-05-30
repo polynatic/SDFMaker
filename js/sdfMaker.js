@@ -22,6 +22,8 @@ export class SDFMaker {
     #outputContainer;
     #outputBlob = null;
     #outputImage = null;
+    #inputImage = null;
+    #inputIsScaled = true;
     #aspect = 1;
     #radius = 1;
     #threshold = .5;
@@ -232,6 +234,9 @@ export class SDFMaker {
 
         this.#clearOutputImage();
 
+        this.#inputImage = image;
+        this.#inputIsScaled = upscale;
+
         this.#loaded = true;
     }
 
@@ -288,7 +293,7 @@ export class SDFMaker {
         const image = document.createElement("img");
         const url = URL.createObjectURL(this.#outputBlob = new Blob(
             [UPNG.encode([pixels], width, height)],
-            { type: "image/png" }));
+            {type: "image/png"}));
 
         image.src = url;
 
@@ -303,15 +308,40 @@ export class SDFMaker {
         if (!this.#loaded)
             return;
 
-        this.#jfa.setSize(this.#inputWidth, this.#inputHeight);
-        this.#color.setSize(this.#inputWidth, this.#inputHeight);
+        // pad image, so that radius covers elements at the edges
+        // compute padding in input-pixel space
+        // radius is in output pixels; scale to input pixels
+        const scale = this.#inputIsScaled
+            ? Math.min(SDFMaker.#SVG_UPSCALE / this.#inputImage.width, SDFMaker.#SVG_UPSCALE / this.#inputImage.height)
+            : 1;
+        const inputScale = this.#inputWidth / this.#outputWidth;
+        const pad = Math.ceil(this.#radius * inputScale);
+
+        // total padded input size
+        const paddedW = this.#inputWidth + 2 * pad;
+        const paddedH = this.#inputHeight + 2 * pad;
+
+        // resize the canvas and re-draw svg centered with padding
+        this.#inputTarget.width = paddedW;
+        this.#inputTarget.height = paddedH;
+        const ctx = this.#inputTarget.getContext("2d");
+        ctx.clearRect(0, 0, paddedW, paddedH);
+        ctx.drawImage(this.#inputImage, pad, pad, this.#inputWidth, this.#inputHeight);
+
+        // re-upload padded texture
+        gl.bindTexture(gl.TEXTURE_2D, this.#input);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
+
+
+        this.#jfa.setSize(paddedW, paddedH);
+        this.#color.setSize(paddedW, paddedH);
         this.#composite.setSize(this.#outputWidth, this.#outputHeight);
 
         this.#jfa.generate(this.#threshold);
         this.#color.generate();
         this.#composite.generate(
-            this.#inputWidth,
-            this.#inputHeight,
+            paddedW,
+            paddedH,
             this.#radius,
             this.#threshold);
 
