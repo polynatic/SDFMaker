@@ -85,9 +85,11 @@ export class SDFMaker {
                     settingWidth.max,
                     Math.max(settingWidth.min, parseInt(settingWidth.value)));
 
-            this.#outputHeight = Math.min(
-                settingHeight.max,
-                Math.max(settingHeight.min, Math.round(this.#outputWidth / this.#aspect)));
+            //this.#outputHeight = Math.min(
+            //    settingHeight.max,
+            //    Math.max(settingHeight.min, Math.round(this.#outputWidth / this.#aspect)));
+            this.#aspect = this.#outputWidth.width / this.#outputHeight;
+            this.#resizePreview();
 
             settingWidth.value = this.#outputWidth;
             settingHeight.value = this.#outputHeight;
@@ -102,9 +104,11 @@ export class SDFMaker {
                     settingHeight.max,
                     Math.max(settingHeight.min, parseInt(settingHeight.value)));
 
-            this.#outputWidth = Math.min(
-                settingWidth.max,
-                Math.max(settingWidth.min, Math.round(this.#outputHeight * this.#aspect)));
+            //this.#outputWidth = Math.min(
+            //    settingWidth.max,
+            //    Math.max(settingWidth.min, Math.round(this.#outputHeight * this.#aspect)));
+            this.#aspect = this.#outputWidth.width / this.#outputHeight;
+            this.#resizePreview();
 
             settingWidth.value = this.#outputWidth;
             settingHeight.value = this.#outputHeight;
@@ -219,7 +223,6 @@ export class SDFMaker {
         this.#inputTarget.height = this.#inputHeight = Math.round(image.height * scale);
 
         this.#aspect = image.width / image.height;
-
         this.#resizePreview();
 
         this.#inputTarget.getContext("2d").drawImage(
