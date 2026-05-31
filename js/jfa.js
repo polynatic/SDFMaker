@@ -33,7 +33,7 @@ export class JFA {
             this.#atlas[layer].setSize(width, height);
     }
 
-    generate(threshold) {
+    generate(threshold, tileX, tileY) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.#input);
 
@@ -51,6 +51,7 @@ export class JFA {
 
         this.#shaderJFA.use();
         this.#shaderJFA.setSize(this.#width, this.#height);
+        this.#shaderJFA.setTile(tileX, tileY);
 
         for (let step = 0, stepCount = steps.length; step < stepCount; ++step) {
             this.#shaderJFA.setStep(steps[step]);

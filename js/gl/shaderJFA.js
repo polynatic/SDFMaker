@@ -33,6 +33,8 @@ export class ShaderJFA extends Shader {
         uniform highp usampler2D source;
         uniform uint step;
         uniform uvec2 size;
+        uniform bool tileX;
+        uniform bool tileY;
 
         in vec2 vUv;
 
@@ -49,7 +51,16 @@ export class ShaderJFA extends Shader {
             uvec2 bestCoordinates = uvec2(0xFFFFFFFFu);
 
             for (int y = -1; y < 2; ++y) for (int x = -1; x < 2; ++x) {
-                pixels = texelFetch(source, clamp(center + ivec2(x, y) * int(step), ivec2(0), ivec2(size) - 1), 0).rg;
+                ivec2 sampleCoordinate = center + ivec2(x, y) * int(step);
+                
+                if(tileX){
+                    sampleCoordinate.x = (sampleCoordinate.x + int(size.x)) % int(size.x);
+                }
+                if(tileY){
+                    sampleCoordinate.y = (sampleCoordinate.y + int(size.y)) % int(size.y);
+                }
+                
+                pixels = texelFetch(source, clamp(sampleCoordinate, ivec2(0), ivec2(size) - 1), 0).rg;
 
                 jfaUnpack(pixels.x, pixelCoordinates.xy, markedOut);
                 jfaUnpack(pixels.y, pixelCoordinates.zw, markedIn);
@@ -57,6 +68,18 @@ export class ShaderJFA extends Shader {
                 deltas = ivec4(
                     ivec2(pixelCoordinates.x, pixelCoordinates.y),
                     ivec2(pixelCoordinates.z, pixelCoordinates.w)) - ivec4(center, center);
+                    
+               if (tileX) {
+                    int w = int(size.x);
+                    deltas.x = (deltas.x + w / 2 + w) % w - w / 2;
+                    deltas.z = (deltas.z + w / 2 + w) % w - w / 2;
+                }
+                if (tileY) {
+                    int h = int(size.y);
+                    deltas.y = (deltas.y + h / 2 + h) % h - h / 2;
+                    deltas.w = (deltas.w + h / 2 + h) % h - h / 2;
+                }
+                    
                 distances = uvec2(
                     deltas.x * deltas.x + deltas.y * deltas.y,
                     deltas.z * deltas.z + deltas.w * deltas.w);
@@ -78,6 +101,8 @@ export class ShaderJFA extends Shader {
 
     #uniformStep;
     #uniformSize;
+    #uniformTileX;
+    #uniformTileY;
 
     constructor() {
         super(ShaderJFA.#SHADER_FRAGMENT);
@@ -86,6 +111,8 @@ export class ShaderJFA extends Shader {
 
         this.#uniformStep = this.uniformLocation("step");
         this.#uniformSize = this.uniformLocation("size");
+        this.#uniformTileX = this.uniformLocation("tileX");
+        this.#uniformTileY = this.uniformLocation("tileY");
     }
 
     setStep(step) {
@@ -94,5 +121,10 @@ export class ShaderJFA extends Shader {
 
     setSize(width, height) {
         gl.uniform2ui(this.#uniformSize, width, height);
+    }
+
+    setTile(x, y) {
+        gl.uniform1f(this.#uniformTileX, x);
+        gl.uniform1f(this.#uniformTileY, y);
     }
 }

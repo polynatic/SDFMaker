@@ -11,7 +11,9 @@ export class ShaderSDF extends Shader {
         uniform uvec2 size;
         uniform float radius;
         uniform float threshold;
-        
+        uniform bool tileX;
+        uniform bool tileY;
+         
         in vec2 vUv;
 
         out vec4 color;
@@ -28,16 +30,32 @@ export class ShaderSDF extends Shader {
             // vec3 sourceColor = texture(sourceColor, vUv).rgb;
             vec3 sourceColor = vec3(1, 1, 1); // all channels white
             
+            ivec2 deltaIn = atlasCoordinate - ivec2(nearestIn);
+            ivec2 deltaOut = atlasCoordinate - ivec2(nearestOut);
+            
+            if (tileX) {
+                int w = int(size.x);
+                deltaIn.x  = ((deltaIn.x  % w) + w + w/2) % w - w/2;
+                deltaOut.x = ((deltaOut.x % w) + w + w/2) % w - w/2;
+            }
+            if (tileY) {
+                int h = int(size.y);
+                deltaIn.y  = ((deltaIn.y  % h) + h + h/2) % h - h/2;
+                deltaOut.y = ((deltaOut.y % h) + h + h/2) % h - h/2;
+            }
+            
             if (texelFetch(source, atlasCoordinate, 0).a > threshold)
-                color = vec4(sourceColor, min(1., .5 + length(vec2(atlasCoordinate - ivec2(nearestIn))) / radius));
+                color = vec4(sourceColor, min(1., .5 + length(vec2(deltaIn)) / radius));
             else
-                color = vec4(sourceColor, max(0., .5 - length(vec2(atlasCoordinate - ivec2(nearestOut))) / radius));
+                color = vec4(sourceColor, max(0., .5 - length(vec2(deltaOut)) / radius));
         }
     `;
 
     #uniformSize;
     #uniformRadius;
     #uniformThreshold;
+    #uniformTileX;
+    #uniformTileY;
 
     constructor() {
         super(ShaderSDF.#SHADER_FRAGMENT);
@@ -51,6 +69,8 @@ export class ShaderSDF extends Shader {
         this.#uniformSize = this.uniformLocation("size");
         this.#uniformRadius = this.uniformLocation("radius");
         this.#uniformThreshold = this.uniformLocation("threshold");
+        this.#uniformTileX = this.uniformLocation("tileX");
+        this.#uniformTileY = this.uniformLocation("tileY");
     }
 
     setSize(width, height) {
@@ -63,5 +83,10 @@ export class ShaderSDF extends Shader {
 
     setThreshold(threshold) {
         gl.uniform1f(this.#uniformThreshold, threshold);
+    }
+
+    setTile(x, y) {
+        gl.uniform1f(this.#uniformTileX, x);
+        gl.uniform1f(this.#uniformTileY, y);
     }
 }

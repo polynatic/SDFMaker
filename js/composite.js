@@ -36,7 +36,7 @@ export class Composite {
         this.#target.setSize(width, height);
     }
 
-    generate(width, height, radius, threshold) {
+    generate(width, height, radius, threshold, tileX, tileY) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.#color.texture);
         gl.activeTexture(gl.TEXTURE1);
@@ -48,6 +48,7 @@ export class Composite {
         this.#shaderSDF.setSize(width, height);
         this.#shaderSDF.setRadius(2 * radius * width / this.#width);
         this.#shaderSDF.setThreshold(threshold);
+        this.#shaderSDF.setTile(tileX, tileY);
 
         this.#target.bind();
 

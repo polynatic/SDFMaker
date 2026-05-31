@@ -19,13 +19,20 @@ export class SDFMaker {
     #settingHeight;
     #settingRadius;
     #settingThreshold;
+    #settingPadRadius;
+    #settingTileX;
+    #settingTileY;
     #outputContainer;
     #outputBlob = null;
     #outputImage = null;
+    #inputImageName = '';
     #inputImage = null;
     #inputIsScaled = true;
     #aspect = 1;
-    #radius = 1;
+    #radius = 8;
+    #padRadius = false;
+    #tileX = false;
+    #tileY = false;
     #threshold = .5;
     #inputWidth = 1;
     #inputHeight = 1;
@@ -53,6 +60,9 @@ export class SDFMaker {
         settingHeight,
         settingRadius,
         settingThreshold,
+        settingTileX,
+        settingTileY,
+        settingPadRadius,
         outputContainer,
         buttonUpload,
         buttonGenerate,
@@ -73,8 +83,19 @@ export class SDFMaker {
 
         inputTarget.ondragleave = () => inputTarget.classList.remove(SDFMaker.#INPUT_TARGET_HOVER);
 
-        settingWidth.disabled = settingHeight.disabled = settingRadius.disabled = settingThreshold.disabled = true;
+        settingWidth.disabled
+            = settingHeight.disabled
+            = settingRadius.disabled
+            = settingThreshold.disabled
+            = settingTileX.disabled
+            = settingTileY.disabled
+            = settingPadRadius.disabled
+            = true;
+
         settingRadius.value = this.#radius;
+        settingPadRadius.checked = this.#padRadius;
+        settingTileX.value = this.#tileX;
+        settingTileY.value = this.#tileY;
 
         settingWidth.oninput = () => {
             if (isNaN(settingWidth.value) || !Number.isInteger(parseFloat(settingWidth.value)))
@@ -136,9 +157,25 @@ export class SDFMaker {
             settingThreshold.value = this.#threshold;
         };
 
+        settingTileX.onclick = () => {
+            this.#tileX = settingTileX.checked;
+            settingTileX.checked = this.#tileX;
+        };
+
+        settingTileY.onclick = () => {
+            this.#tileY = settingTileY.checked;
+            settingTileY.checked = this.#tileY;
+        };
+
+        settingPadRadius.onclick = () => {
+            this.#padRadius = settingPadRadius.checked;
+            settingPadRadius.checked = this.#padRadius;
+        };
+
         buttonUpload.oninput = () => {
             this.#upload(buttonUpload.files[0]);
         };
+
         buttonGenerate.onclick = this.#generate.bind(this);
         buttonSave.onclick = this.#save.bind(this);
 
@@ -149,7 +186,10 @@ export class SDFMaker {
         this.#settingWidth = settingWidth;
         this.#settingHeight = settingHeight;
         this.#settingRadius = settingRadius;
+        this.#settingPadRadius = settingPadRadius;
         this.#settingThreshold = settingThreshold;
+        this.#settingTileX = settingTileX;
+        this.#settingTileY = settingTileY;
         this.#outputContainer = outputContainer;
 
         gl.bindTexture(gl.TEXTURE_2D, this.#input);
@@ -212,7 +252,15 @@ export class SDFMaker {
         this.#settingWidth.value = this.#outputWidth = image.width;
         this.#settingHeight.value = this.#outputHeight = image.height;
 
-        this.#settingWidth.disabled = this.#settingHeight.disabled = this.#settingRadius.disabled = this.#settingThreshold.disabled = false;
+        this.#settingWidth.disabled
+            = this.#settingHeight.disabled
+            = this.#settingRadius.disabled
+            = this.#settingThreshold.disabled
+            = this.#settingTileX.disabled
+            = this.#settingTileY.disabled
+            = this.#settingPadRadius.disabled
+            = false;
+
         this.#inputMessage.style.display = "none";
         this.#inputInfo.innerText = `
             Name: ${name}
@@ -311,46 +359,56 @@ export class SDFMaker {
         if (!this.#loaded)
             return;
 
-        // pad image, so that radius covers elements at the edges
-        // compute padding in input-pixel space
-        // radius is in output pixels; scale to input pixels
-        const scale = this.#inputIsScaled
-            ? Math.min(SDFMaker.#SVG_UPSCALE / this.#inputImage.width, SDFMaker.#SVG_UPSCALE / this.#inputImage.height)
-            : 1;
-        const inputScale = this.#inputWidth / this.#outputWidth;
-        const pad = Math.ceil(this.#radius * inputScale);
+        var width = this.#inputWidth;
+        var height = this.#inputHeight;
 
-        // total padded input size
-        const paddedW = this.#inputWidth + 2 * pad;
-        const paddedH = this.#inputHeight + 2 * pad;
+        if (this.#padRadius) {
+            // pad image, so that radius covers elements at the edges
+            // compute padding in input-pixel space
+            // radius is in output pixels; scale to input pixels
+            const scale = this.#inputIsScaled
+                ? Math.min(SDFMaker.#SVG_UPSCALE / this.#inputImage.width, SDFMaker.#SVG_UPSCALE / this.#inputImage.height)
+                : 1;
+            const inputScale = this.#inputWidth / this.#outputWidth;
+            const pad = Math.ceil(this.#radius * inputScale);
 
-        // resize the canvas and re-draw svg centered with padding
-        this.#inputTarget.width = paddedW;
-        this.#inputTarget.height = paddedH;
-        const ctx = this.#inputTarget.getContext("2d");
-        ctx.clearRect(0, 0, paddedW, paddedH);
-        ctx.drawImage(this.#inputImage, pad, pad, this.#inputWidth, this.#inputHeight);
+            // total padded input size
+            const paddedWidth = width + 2 * pad;
+            const paddedHeight = height + 2 * pad;
 
-        // re-upload padded texture
-        gl.bindTexture(gl.TEXTURE_2D, this.#input);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
+            // resize the canvas and re-draw svg centered with padding
+            this.#inputTarget.width = paddedWidth;
+            this.#inputTarget.height = paddedHeight;
+            const ctx = this.#inputTarget.getContext("2d");
+            ctx.clearRect(0, 0, paddedWidth, paddedHeight);
+            ctx.drawImage(this.#inputImage, pad, pad, width, height);
 
-        // adjust preview aspect
-        this.#aspect = paddedW / paddedH;
-        this.#resizePreview();
+            // re-upload padded texture
+            gl.bindTexture(gl.TEXTURE_2D, this.#input);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
 
+            // adjust preview aspect
+            this.#aspect = paddedWidth / paddedHeight;
+            this.#resizePreview();
 
-        this.#jfa.setSize(paddedW, paddedH);
-        this.#color.setSize(paddedW, paddedH);
+            width = paddedWidth;
+            height = paddedHeight;
+        }
+
+        this.#jfa.setSize(width, height);
+        this.#color.setSize(width, height);
         this.#composite.setSize(this.#outputWidth, this.#outputHeight);
 
-        this.#jfa.generate(this.#threshold);
+        this.#jfa.generate(this.#threshold, this.#tileX, this.#tileY);
         this.#color.generate();
         this.#composite.generate(
-            paddedW,
-            paddedH,
+            width,
+            height,
             this.#radius,
-            this.#threshold);
+            this.#threshold,
+            this.#tileX,
+            this.#tileY
+        );
 
         this.#clearOutputImage();
 
