@@ -19,18 +19,14 @@ export class SDFMaker {
     #settingHeight;
     #settingRadius;
     #settingThreshold;
-    #settingPadRadius;
     #settingTileX;
     #settingTileY;
     #outputContainer;
     #outputBlob = null;
     #outputImage = null;
     #inputImageName = '';
-    #inputImage = null;
-    #inputIsScaled = true;
     #aspect = 1;
     #radius = 8;
-    #padRadius = false;
     #tileX = false;
     #tileY = false;
     #threshold = .5;
@@ -62,7 +58,6 @@ export class SDFMaker {
         settingThreshold,
         settingTileX,
         settingTileY,
-        settingPadRadius,
         outputContainer,
         buttonUpload,
         buttonGenerate,
@@ -89,11 +84,9 @@ export class SDFMaker {
             = settingThreshold.disabled
             = settingTileX.disabled
             = settingTileY.disabled
-            = settingPadRadius.disabled
             = true;
 
         settingRadius.value = this.#radius;
-        settingPadRadius.checked = this.#padRadius;
         settingTileX.value = this.#tileX;
         settingTileY.value = this.#tileY;
 
@@ -167,10 +160,6 @@ export class SDFMaker {
             settingTileY.checked = this.#tileY;
         };
 
-        settingPadRadius.onclick = () => {
-            this.#padRadius = settingPadRadius.checked;
-            settingPadRadius.checked = this.#padRadius;
-        };
 
         buttonUpload.oninput = () => {
             this.#upload(buttonUpload.files[0]);
@@ -186,7 +175,6 @@ export class SDFMaker {
         this.#settingWidth = settingWidth;
         this.#settingHeight = settingHeight;
         this.#settingRadius = settingRadius;
-        this.#settingPadRadius = settingPadRadius;
         this.#settingThreshold = settingThreshold;
         this.#settingTileX = settingTileX;
         this.#settingTileY = settingTileY;
@@ -258,7 +246,6 @@ export class SDFMaker {
             = this.#settingThreshold.disabled
             = this.#settingTileX.disabled
             = this.#settingTileY.disabled
-            = this.#settingPadRadius.disabled
             = false;
 
         this.#inputMessage.style.display = "none";
@@ -284,10 +271,7 @@ export class SDFMaker {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
 
         this.#clearOutputImage();
-
-        this.#inputImage = image;
-        this.#inputIsScaled = upscale;
-
+        
         this.#inputImageName = name.substring(0, name.lastIndexOf('.')) || name; // without extension
 
         this.#loaded = true;
@@ -363,39 +347,6 @@ export class SDFMaker {
 
         var width = this.#inputWidth;
         var height = this.#inputHeight;
-
-        if (this.#padRadius) {
-            // pad image, so that radius covers elements at the edges
-            // compute padding in input-pixel space
-            // radius is in output pixels; scale to input pixels
-            const scale = this.#inputIsScaled
-                ? Math.min(SDFMaker.#SVG_UPSCALE / this.#inputImage.width, SDFMaker.#SVG_UPSCALE / this.#inputImage.height)
-                : 1;
-            const inputScale = this.#inputWidth / this.#outputWidth;
-            const pad = Math.ceil(this.#radius * inputScale);
-
-            // total padded input size
-            const paddedWidth = width + 2 * pad;
-            const paddedHeight = height + 2 * pad;
-
-            // resize the canvas and re-draw svg centered with padding
-            this.#inputTarget.width = paddedWidth;
-            this.#inputTarget.height = paddedHeight;
-            const ctx = this.#inputTarget.getContext("2d");
-            ctx.clearRect(0, 0, paddedWidth, paddedHeight);
-            ctx.drawImage(this.#inputImage, pad, pad, width, height);
-
-            // re-upload padded texture
-            gl.bindTexture(gl.TEXTURE_2D, this.#input);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.#inputTarget);
-
-            // adjust preview aspect
-            this.#aspect = paddedWidth / paddedHeight;
-            this.#resizePreview();
-
-            width = paddedWidth;
-            height = paddedHeight;
-        }
 
         this.#jfa.setSize(width, height);
         this.#color.setSize(width, height);
