@@ -288,6 +288,8 @@ export class SDFMaker {
         this.#inputImage = image;
         this.#inputIsScaled = upscale;
 
+        this.#inputImageName = name.substring(0, name.lastIndexOf('.')) || name; // without extension
+
         this.#loaded = true;
     }
 
@@ -427,7 +429,11 @@ export class SDFMaker {
             const link = document.createElement("a");
 
             link.href = this.#outputImage.src;
-            link.download = "image.png";
+
+            const isTiled = this.#tileX || this.#tileY;
+            const tileAxes = `${this.#tileX ? 'x' : ''}${this.#tileY ? 'y' : ''}`;
+            const tiledPostfix = isTiled ? `-tiled-${tileAxes}` : '';
+            link.download = `sdf-${this.#inputImageName}${tiledPostfix}.png`;
             link.click();
         }
     }
