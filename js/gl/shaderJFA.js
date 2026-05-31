@@ -48,7 +48,7 @@ export class ShaderJFA extends Shader {
             ivec4 deltas;
             ivec2 center = ivec2(gl_FragCoord.xy);
             uvec2 bestDistances = uvec2(0xFFFFFFFFu);
-            uvec2 bestCoordinates = uvec2(0xFFFFFFFFu);
+            uvec2 bestCoordinates = texelFetch(source, center, 0).rg;
 
             for (int y = -1; y < 2; ++y) for (int x = -1; x < 2; ++x) {
                 ivec2 sampleCoordinate = center + ivec2(x, y) * int(step);
